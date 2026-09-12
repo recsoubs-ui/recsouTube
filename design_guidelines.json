@@ -1,0 +1,134 @@
+{
+  "brand": {
+    "name": "RECSOUTUBE",
+    "tagline": "Une expérience vidéo épurée, rapide et indépendante",
+    "concept": "Modern, distraction-free video streaming web application powered by Invidious API with a distinct editorial-cinematic visual identity. Not a YouTube clone.",
+    "emotional_archetype": "The Performance Pro & Cinematic Studio (Deep Obsidian + Electric Flare Accent)"
+  },
+  "theme": {
+    "default": "dark",
+    "support_light_mode": true,
+    "dark_tokens": {
+      "background": "#0B0E14",
+      "surface_card": "#121722",
+      "surface_elevated": "#1A202C",
+      "border": "rgba(255, 255, 255, 0.08)",
+      "border_hover": "rgba(255, 59, 48, 0.4)",
+      "foreground": "#F3F4F6",
+      "foreground_muted": "#9CA3AF",
+      "primary_accent": "#FF3B30",
+      "primary_hover": "#E03126",
+      "secondary_accent": "#6366F1",
+      "badge_live": "#EF4444",
+      "glass_bg": "rgba(11, 14, 20, 0.75)",
+      "glass_border": "rgba(255, 255, 255, 0.12)"
+    },
+    "light_tokens": {
+      "background": "#F8FAFC",
+      "surface_card": "#FFFFFF",
+      "surface_elevated": "#F1F5F9",
+      "border": "rgba(15, 23, 42, 0.08)",
+      "border_hover": "rgba(225, 29, 72, 0.4)",
+      "foreground": "#0F172A",
+      "foreground_muted": "#64748B",
+      "primary_accent": "#E11D48",
+      "primary_hover": "#BE123C",
+      "secondary_accent": "#4F46E5",
+      "badge_live": "#DC2626",
+      "glass_bg": "rgba(255, 255, 255, 0.85)",
+      "glass_border": "rgba(15, 23, 42, 0.12)"
+    }
+  },
+  "typography": {
+    "primary_font_family": "Satoshi, Plus Jakarta Sans, sans-serif",
+    "heading_font_family": "Cabinet Grotesk, Clash Display, sans-serif",
+    "mono_font_family": "JetBrains Mono, monospace",
+    "rules": {
+      "h1_hero": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight",
+      "h2_section": "text-xl sm:text-2xl font-bold tracking-tight",
+      "h3_card": "text-base font-semibold line-clamp-2 leading-snug",
+      "metadata": "text-xs font-medium text-muted-foreground",
+      "overline": "text-xs font-mono uppercase tracking-widest text-primary"
+    }
+  },
+  "layout": {
+    "structure": "Fixed top glass header + collapsible responsive left navigation sidebar + main scrollable content stage with asymmetric grid",
+    "header_height": "h-16 (64px)",
+    "sidebar_width": "w-64 (desktop expanded), w-20 (desktop collapsed/icon view), slide-over drawer (mobile)",
+    "container_padding": "px-4 sm:px-6 lg:px-8 py-6",
+    "bento_grid_video": "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 lg:gap-6",
+    "watch_page_layout": "grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 (Player & Metadata: col-span-12 lg:col-span-8 | Recommended Sidebar: col-span-12 lg:col-span-4)"
+  },
+  "components": {
+    "video_card": {
+      "style": "Aspect-video thumbnail container with rounded-2xl overflow-hidden, smooth zoom-on-hover scale-105 transition duration-300, glass duration badge on bottom right, high density title & channel info with avatar",
+      "badge_duration": "absolute bottom-2 right-2 px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-black/80 text-white backdrop-blur-md border border-white/10",
+      "hover_effect": "shadow-xl shadow-primary/5 border border-primary/20 -translate-y-1"
+    },
+    "custom_player": {
+      "wrapper": "relative w-full aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-black group",
+      "controls_overlay": "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col gap-2 backdrop-blur-sm",
+      "progress_bar": "w-full h-1.5 hover:h-2.5 bg-white/20 rounded-full cursor-pointer relative transition-all"
+    },
+    "header_search": {
+      "container": "relative w-full max-w-xl mx-auto",
+      "input": "w-full pl-10 pr-12 py-2.5 rounded-full bg-surface-elevated border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm transition-all shadow-inner",
+      "search_icon": "absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4"
+    },
+    "sidebar_nav": {
+      "item_active": "flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-primary/10 text-primary font-semibold border border-primary/20 shadow-sm",
+      "item_inactive": "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-surface-elevated transition-colors font-medium text-sm"
+    }
+  },
+  "pages_required": [
+    "Home Feed (/)",
+    "Search Results (/search?q=...)",
+    "Video Watch (/watch/:videoId)",
+    "Channel Details (/channel/:channelId)",
+    "Trending Videos (/trending)",
+    "Subscriptions (/subscriptions)",
+    "History (/history)",
+    "Playlists (/playlists & /playlist/:id)",
+    "Settings (/settings)",
+    "Auth Login & Register (/login & /register)",
+    "404 Not Found"
+  ],
+  "states_and_ux": {
+    "skeleton_loader": "Animated subtle shimmer pulsing cards with matching rounded-2xl aspect-video thumbnails and line blocks",
+    "empty_states": "Iconography + clean French copy + primary button action for history/subscriptions/playlists",
+    "toast_notifications": "Use Sonner for user actions (video saved to playlist, instance changed, link copied)",
+    "animations": "Framer motion page fade-ins, gentle hover lifts on video cards, micro-interactions on play/like buttons"
+  },
+  "testing_and_attributes": {
+    "rule": "Every button, link, search input, filter tab, video card, player control, theme toggle, and key metric MUST include data-testid",
+    "examples": {
+      "search_input": "data-testid=\"header-search-input\"",
+      "search_submit": "data-testid=\"header-search-submit\"",
+      "video_card": "data-testid=\"video-card-{videoId}\"",
+      "theme_toggle": "data-testid=\"theme-toggle-button\"",
+      "nav_home": "data-testid=\"nav-link-home\"",
+      "nav_trending": "data-testid=\"nav-link-trending\"",
+      "player_play_pause": "data-testid=\"player-play-pause-button\""
+    }
+  },
+  "asset_urls": {
+    "avatars": [
+      "https://images.unsplash.com/photo-1740252117012-bb53ad05e370?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "https://images.unsplash.com/photo-1740252117027-4275d3f84385?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "https://images.unsplash.com/photo-1740252117013-4fb21771e7ca?crop=entropy&cs=srgb&fm=jpg&q=85"
+    ],
+    "sample_thumbnails": [
+      "https://images.unsplash.com/photo-1768560838887-f3cef74248cb?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "https://images.unsplash.com/photo-1758179762049-615d9aac58ea?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "https://images.unsplash.com/photo-1779497056469-afa3b43d0952?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "https://images.unsplash.com/photo-1759692788195-b95da1f4a04c?crop=entropy&cs=srgb&fm=jpg&q=85"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Note: Frontend uses React JavaScript (.js / .jsx), not TypeScript. Keep code in .js/.jsx syntax.",
+    "Implement Invidious API integration layer with fallback instances (e.g., invidious.nerdvpn.de, inv.tux.pizza, vid.puffyan.us, or public API wrapper) with custom mock fallback data if instances are unreachable.",
+    "Maintain high contrast in both Dark and Light themes. Avoid low-contrast text on dark backgrounds.",
+    "Ensure total responsiveness from mobile (<640px) to ultra-wide displays.",
+    "Do NOT copy YouTube styling directly; use RECSOUTUBE's signature rounded-2xl cards, dark studio surface styling, glowing primary accent borders, and glassmorphic top header."
+  ]
+}

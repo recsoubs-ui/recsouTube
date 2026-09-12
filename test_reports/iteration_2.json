@@ -1,0 +1,37 @@
+{
+  "summary": "Backend regression pytest: 7/7 PASS (search, video OK, video blocked-424 + search survives, auth/me, history CRUD, playlists CRUD with id contract, subscriptions idempotent). Frontend: search flow OK (20 cards, heading contains 'music'), Watch OK page renders progressive 360p mp4 stream with videoplayback URL and NO youtube iframe, Watch blocked page shows French 'YouTube bloque temporairement...' + watch-retry-button, register/login OK, Playlists create+persist+delete OK, Subscriptions page shows subscribed channel with unsub-{channelId}, Like button click shows 'Ajouté à vos favoris' toast, Subscribe click switches S'abonner→Abonné. CRITICAL BUG: Watch.jsx second useEffect (POST /history + prefetch /likes and /subscriptions) never fires on page load — so history entries are NEVER recorded automatically after watching a video, and subscribed/liked state is NOT preloaded on revisit (button always shows S'abonner even when the user is already subscribed).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Watch.jsx", "issue": "Second useEffect at lines 51-67 never executes: only /videos/{id} and /auth/me are called on load; no POST /history, no GET /likes, no GET /subscriptions. Verified by intercepting network requests in Playwright and confirming /api/history returns {results:[]} after visiting /watch/dQw4w9WgXcQ while authenticated. Consequently the History page shows 'Aucune vidéo regardée' and revisiting /watch shows 'S'abonner' even after a successful subscribe (state not preloaded).", "selector": "src/pages/Watch.jsx useEffect([user, video])", "priority": "HIGH"}
+    ],
+    "integration_issues": [
+      {"flow": "Watch → History auto-record", "issue": "Visiting /watch/{videoId} while authenticated does NOT insert into history. Manual API POST /api/history works fine (backend OK).", "affected_selectors": ["[data-testid=\"watch-title\"]", "[data-testid^=\"history-remove-\"]"]},
+      {"flow": "Watch subscribe state preload", "issue": "After successfully subscribing (POST /subscriptions returns ok), navigating away and back to the same /watch page displays 'S'abonner' instead of 'Abonné'. Backend GET /subscriptions correctly contains the channel; frontend simply never calls it on watch mount.", "affected_selectors": ["[data-testid=\"watch-subscribe-button\"]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Fix Watch.jsx effect that should POST /history and pre-fetch /likes + /subscriptions when both user and video are loaded. Root cause is that this useEffect isn't executing at all on load — verified via Playwright request interception (only /videos/{id} and /auth/me are called). Suggested fix: split into two effects (one on [user, video?.videoId] for history, another on [user, video?.authorId] for likes/subs) OR ensure video state is stable and force effect to run when both become truthy. Also consider moving the history POST logic so it doesn't depend on the auth loading race."
+  ],
+  "critical_code_review_comments": [
+    "Watch.jsx: useEffect deps use full `video` object; while React should detect ref change, in practice the history/likes/subs effect is silently not firing. Recommend using scalar deps like video?.videoId and video?.authorId to be robust.",
+    "server.py: subscribe endpoint uses update_one upsert but each upsert sets a new `id` (uuid.uuid4()) on every POST, which mutates the id on idempotent re-subscribes. Consider using $setOnInsert for id/createdAt.",
+    "Playlists POST returns dict that had _id mutated in place; server.py pops it but only after insert_one. Fine, but cleaner to use {_id: 0} projection when reading back.",
+    "Backend endpoints prefixed with /api ✓, MongoDB _id excluded ✓, Env vars used ✓."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "~85% (2 integration bugs on Watch)"},
+  "test_credentials": "No pre-seeded user. Tests register qa_<random>@example.com / qatester123 dynamically.",
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend 100% green. Focus retest on Watch.jsx after fix: verify (1) POST /api/history fires on watch load (network intercept), (2) /history page shows the entry, (3) revisiting /watch shows 'Abonné' when already subscribed (state preloaded), (4) like button toggles from preloaded state. Use test credentials via /api/auth/register. dQw4w9WgXcQ is the reliable playable video; GqrKj5lD5y4 is the reliable 424 case.",
+  "rca of the issue": "Watch.jsx effect [user, video] gate `if (!user || !video?.videoId) return;` prevents any action while auth is loading. When AuthContext resolves after video is set, the effect should re-run with (newUser, sameVideoRef), but network capture shows it never actually POSTs /history nor GETs /likes or /subscriptions on any render. Likely stale-closure or dep-comparison issue with the video object reference not being seen as changed once user finally loads. Splitting into effects keyed on scalar values (video?.videoId, video?.authorId) is the recommended fix."
+}
