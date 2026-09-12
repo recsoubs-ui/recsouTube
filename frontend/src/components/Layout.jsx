@@ -103,26 +103,26 @@ export default function Layout({ children }) {
           </Link>
         </div>
 
-        <form onSubmit={onSubmit} className="flex-1 max-w-xl mx-auto relative">
+        <form onSubmit={onSubmit} className="flex-1 min-w-0 max-w-xl mx-auto relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             data-testid="header-search-input"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Rechercher une vidéo, un artiste, un thème..."
-            className="pl-10 pr-24 rounded-full h-10 surface-elevated border-border/70 focus-visible:ring-primary"
+            className="pl-10 pr-3 sm:pr-24 rounded-full h-10 surface-elevated border-border/70 focus-visible:ring-primary"
           />
           <Button
             data-testid="header-search-submit"
             type="submit"
             size="sm"
-            className="absolute right-1 top-1 h-8 rounded-full"
+            className="hidden sm:inline-flex absolute right-1 top-1 h-8 rounded-full"
           >
             Rechercher
           </Button>
         </form>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <Button
             data-testid="theme-toggle-button"
             variant="ghost"

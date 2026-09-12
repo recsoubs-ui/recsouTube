@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import CustomInstanceCard from "@/components/CustomInstanceCard";
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -68,6 +69,8 @@ export default function Settings() {
         </Card>
       )}
 
+      <CustomInstanceCard user={user} onSaved={load} />
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle>Instances Invidious / Piped</CardTitle>
@@ -95,6 +98,7 @@ export default function Settings() {
                 )}
                 <span className="truncate flex-1">{i.url}</span>
                 <Badge variant="secondary" className="text-[10px]">{i.type}</Badge>
+                {i.custom && <Badge className="text-[10px]">perso</Badge>}
                 {i.note && <span className="text-muted-foreground truncate max-w-[40%]">{i.note}</span>}
               </li>
             ))}

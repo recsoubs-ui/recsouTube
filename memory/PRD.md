@@ -30,6 +30,11 @@ Full-stack video platform "RecsouTube" utilisant Invidious (avec fallback Piped)
 - POST /history et /subscriptions renvoient {ok, item}; subscriptions $setOnInsert (id stable)
 - Lecture réelle vérifiée avec Google Chrome (/app/tests/play_check.py). NB: le Chromium headless du screenshot tool n'a pas H.264.
 
+## Implémenté (2026-09-12) — Instance personnalisée
+- Backend: GET/PUT/DELETE /api/settings/instance (PUT/DELETE auth requis), POST /api/settings/instance/test (probe: search {status, ok, count} + videos {status, ok, streams}). Stocké en Mongo `settings` {key:"custom_instance", url, type, authHeader, authValue}. authValue jamais renvoyée (hasAuth). Chargée au démarrage, insérée en position 0 (prioritaire), headers d'auth envoyés par instance.
+- Frontend: Settings → composant CustomInstanceCard (URL, type, header/valeur auth, Tester la connexion, Enregistrer, Retirer). Badge "perso" dans la liste des instances.
+- Header mobile: bouton Rechercher masqué <sm (Enter soumet), plus d'overflow à 390px.
+
 ## BLOQUEUR EXTERNE (09/2026)
 - YouTube bloque l'extraction de flux sur les instances Piped publiques pour la quasi-totalité des vidéos (0/12 résultats de recherche lisibles, dQw4w9WgXcQ OK). Invidious publiques: API derrière anti-bot (Anubis) → 403/HTML.
 - yt-dlp depuis le pod: URLs obtenues mais téléchargement 403 (PO token) → non viable.

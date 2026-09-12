@@ -119,14 +119,15 @@ async def invidious_status():
     return {
         "instances": svc.get_health_snapshot(),
         "configured": svc.get_configured_instances(),
-        "current": svc._current,
+        "current": svc._public(svc._current),
     }
 
 
 @api.post("/invidious/refresh")
 async def invidious_refresh():
     results = await refresh_all_instances()
-    return {"results": results, "current": get_invidious_service()._current}
+    svc = get_invidious_service()
+    return {"results": results, "current": svc._public(svc._current)}
 
 
 @api.get("/search")
@@ -199,6 +200,92 @@ async def get_comments(video_id: str):
         raise HTTPException(status_code=424, detail=str(e))
     except InvidiousUnavailableError as e:
         raise HTTPException(status_code=503, detail=str(e))
+
+
+# ------------------ Custom instance settings ------------------
+class InstanceIn(BaseModel):
+    url: str = Field(min_length=8, max_length=300)
+    type: str = "invidious"
+    authHeader: str = ""
+    authValue: str = ""
+
+
+def _validate_instance(payload: InstanceIn) -> tuple[str, str]:
+    url = payload.url.strip().rstrip("/")
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="L'URL doit commencer par http:// ou https://")
+    if payload.type not in ("invidious", "piped"):
+        raise HTTPException(status_code=400, detail="Type d'instance invalide (invidious ou piped)")
+    return url, payload.type
+
+
+def _instance_headers(header: str, value: str) -> dict:
+    header, value = header.strip(), value.strip()
+    return {header: value} if header and value else {}
+
+
+async def _saved_instance() -> Optional[dict]:
+    return await db.settings.find_one({"key": "custom_instance"}, {"_id": 0})
+
+
+def _instance_public(doc: Optional[dict]) -> Optional[dict]:
+    if not doc:
+        return None
+    return {
+        "url": doc["url"],
+        "type": doc["type"],
+        "authHeader": doc.get("authHeader") or "",
+        "hasAuth": bool(doc.get("authValue")),
+        "updatedAt": doc.get("updatedAt"),
+    }
+
+
+@api.get("/settings/instance")
+async def get_custom_instance():
+    return {"instance": _instance_public(await _saved_instance())}
+
+
+@api.post("/settings/instance/test")
+async def test_custom_instance(payload: InstanceIn, user=Depends(get_current_user)):
+    url, itype = _validate_instance(payload)
+    auth_value = payload.authValue
+    if payload.authHeader and not auth_value:
+        saved = await _saved_instance()
+        if saved and saved.get("authHeader") == payload.authHeader.strip():
+            auth_value = saved.get("authValue") or ""
+    headers = _instance_headers(payload.authHeader, auth_value)
+    probe = await get_invidious_service().probe_instance(
+        {"url": url, "type": itype, "headers": headers}
+    )
+    return probe
+
+
+@api.put("/settings/instance")
+async def save_custom_instance(payload: InstanceIn, user=Depends(get_current_user)):
+    url, itype = _validate_instance(payload)
+    auth_value = payload.authValue.strip()
+    saved = await _saved_instance()
+    if payload.authHeader and not auth_value and saved and saved.get("authHeader") == payload.authHeader.strip():
+        auth_value = saved.get("authValue") or ""
+    doc = {
+        "key": "custom_instance",
+        "url": url,
+        "type": itype,
+        "authHeader": payload.authHeader.strip(),
+        "authValue": auth_value,
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
+        "updatedBy": user["id"],
+    }
+    await db.settings.update_one({"key": "custom_instance"}, {"$set": doc}, upsert=True)
+    get_invidious_service().set_custom_instance(url, itype, _instance_headers(doc["authHeader"], auth_value))
+    return {"ok": True, "instance": _instance_public(doc)}
+
+
+@api.delete("/settings/instance")
+async def delete_custom_instance(user=Depends(get_current_user)):
+    await db.settings.delete_one({"key": "custom_instance"})
+    get_invidious_service().clear_custom_instance()
+    return {"ok": True}
 
 
 # ------------------ Auth ------------------
@@ -470,6 +557,13 @@ async def on_startup():
     await db.playlists.create_index("userId")
     await db.subscriptions.create_index([("userId", 1), ("channelId", 1)], unique=True)
     await db.likes.create_index([("userId", 1), ("videoId", 1)], unique=True)
+    await db.settings.create_index("key", unique=True)
+    saved = await _saved_instance()
+    if saved:
+        get_invidious_service().set_custom_instance(
+            saved["url"], saved["type"], _instance_headers(saved.get("authHeader") or "", saved.get("authValue") or "")
+        )
+        logger.info("Custom instance loaded: %s", saved["url"])
     logger.info("RecsouTube backend started.")
 
 

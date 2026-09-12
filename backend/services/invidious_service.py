@@ -82,8 +82,37 @@ class InvidiousService:
     def _has(self, url: str) -> bool:
         return any(i["url"] == url for i in self.instances)
 
-    def get_configured_instances(self) -> list[dict[str, str]]:
-        return list(self.instances)
+    def get_configured_instances(self) -> list[dict[str, Any]]:
+        return [self._public(i) for i in self.instances]
+
+    @staticmethod
+    def _public(inst: Optional[dict]) -> Optional[dict]:
+        if not inst:
+            return None
+        return {"url": inst["url"], "type": inst["type"], "custom": bool(inst.get("custom"))}
+
+    def set_custom_instance(self, url: str, itype: str, headers: Optional[dict] = None) -> dict:
+        url = url.strip().rstrip("/")
+        self.clear_custom_instance()
+        self.instances = [i for i in self.instances if i["url"] != url]
+        inst = {"url": url, "type": itype, "custom": True, "headers": dict(headers or {})}
+        self.instances.insert(0, inst)
+        self._health.pop(url, None)
+        self._current = None
+        self._cache.clear()
+        return self._public(inst)
+
+    def clear_custom_instance(self) -> None:
+        for i in list(self.instances):
+            if i.get("custom"):
+                self.instances.remove(i)
+                self._health.pop(i["url"], None)
+                if self._current and self._current["url"] == i["url"]:
+                    self._current = None
+        self._cache.clear()
+
+    def get_custom_instance(self) -> Optional[dict]:
+        return next((i for i in self.instances if i.get("custom")), None)
 
     def get_health_snapshot(self) -> list[dict[str, Any]]:
         out = []
@@ -96,22 +125,26 @@ class InvidiousService:
                     "healthy": h.get("healthy"),
                     "checked_at": h.get("checked_at"),
                     "note": h.get("note"),
-                    "is_current": self._current and i["url"] == self._current["url"],
+                    "custom": bool(i.get("custom")),
+                    "is_current": bool(self._current and i["url"] == self._current["url"]),
                 }
             )
         return out
 
-    async def _http_get(self, url: str, params: Optional[dict] = None) -> httpx.Response:
+    async def _http_get(
+        self, url: str, params: Optional[dict] = None, headers: Optional[dict] = None
+    ) -> httpx.Response:
+        hdrs = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+        hdrs.update(headers or {})
         async with httpx.AsyncClient(
-            timeout=self.REQUEST_TIMEOUT,
-            follow_redirects=True,
-            headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+            timeout=self.REQUEST_TIMEOUT, follow_redirects=True, headers=hdrs
         ) as client:
             return await client.get(url, params=params or {})
 
-    async def probe_instance(self, instance: dict[str, str]) -> dict[str, Any]:
+    async def probe_instance(self, instance: dict[str, Any]) -> dict[str, Any]:
         url = instance["url"].rstrip("/")
         itype = instance["type"]
+        hdrs = instance.get("headers") or {}
         result: dict[str, Any] = {
             "url": url,
             "type": itype,
@@ -130,32 +163,39 @@ class InvidiousService:
                 video_path = f"/streams/{self.probe_video_id}"
 
             try:
-                r = await self._http_get(f"{url}{search_path}", search_params)
-                ok = False
+                r = await self._http_get(f"{url}{search_path}", search_params, hdrs)
+                ok, count, err = False, 0, ""
                 if r.status_code == 200:
                     try:
                         j = r.json()
-                        ok = isinstance(j, list) or (
-                            isinstance(j, dict) and isinstance(j.get("items"), list)
-                        )
+                        items = j if isinstance(j, list) else (j.get("items") if isinstance(j, dict) else None)
+                        ok = isinstance(items, list)
+                        count = len(items) if ok else 0
                     except Exception:
-                        ok = False
-                result["endpoints"]["search"] = {"status": r.status_code, "ok": ok}
+                        err = "réponse non JSON (page HTML / anti-bot ?)"
+                else:
+                    err = _short_body(r)
+                result["endpoints"]["search"] = {"status": r.status_code, "ok": ok, "count": count, "error": err}
             except Exception as e:
-                result["endpoints"]["search"] = {"status": None, "ok": False, "error": str(e)}
+                result["endpoints"]["search"] = {"status": None, "ok": False, "count": 0, "error": str(e)}
 
             try:
-                r = await self._http_get(f"{url}{video_path}")
-                ok = False
+                r = await self._http_get(f"{url}{video_path}", None, hdrs)
+                ok, streams, err = False, 0, ""
                 if r.status_code == 200:
                     try:
                         j = r.json()
                         ok = bool(j.get("title") or j.get("videoId"))
+                        streams = len([f for f in (j.get("formatStreams") or []) if _is_playable_stream(f)]) + len(
+                            [v for v in (j.get("videoStreams") or []) if not v.get("videoOnly") and _is_playable_stream(v)]
+                        )
                     except Exception:
-                        ok = False
-                result["endpoints"]["videos"] = {"status": r.status_code, "ok": ok}
+                        err = "réponse non JSON (page HTML / anti-bot ?)"
+                else:
+                    err = _short_body(r)
+                result["endpoints"]["videos"] = {"status": r.status_code, "ok": ok, "streams": streams, "error": err}
             except Exception as e:
-                result["endpoints"]["videos"] = {"status": None, "ok": False, "error": str(e)}
+                result["endpoints"]["videos"] = {"status": None, "ok": False, "streams": 0, "error": str(e)}
 
             s_ok = result["endpoints"].get("search", {}).get("ok")
             v_ok = result["endpoints"].get("videos", {}).get("ok")
@@ -248,7 +288,7 @@ class InvidiousService:
                 continue
 
             try:
-                r = await self._http_get(f"{inst['url']}{path}", req_params)
+                r = await self._http_get(f"{inst['url']}{path}", req_params, inst.get("headers"))
             except (httpx.TimeoutException, httpx.RequestError) as e:
                 last_error = f"network error on {inst['url']}: {e}"
                 self._mark_bad(inst["url"], last_error)
@@ -628,6 +668,16 @@ def _format_date(iso: str) -> str:
         return dt.strftime("%d/%m/%Y")
     except Exception:
         return iso
+
+
+def _short_body(r: httpx.Response) -> str:
+    try:
+        j = r.json()
+        if isinstance(j, dict) and j.get("error"):
+            return str(j["error"]).split("\n", 1)[0][:160]
+    except Exception:
+        pass
+    return f"HTTP {r.status_code}"
 
 
 def _upstream_error_message(r: httpx.Response) -> str:
