@@ -175,6 +175,18 @@ export default function VideoPlayer({ video, onRetry }) {
         </div>
       )}
 
+      {video?.source?.host && (
+        <div
+          data-testid="player-source-badge"
+          title={`Vidéo servie par ${video.source.url}`}
+          className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono uppercase tracking-widest text-white/90 opacity-80 group-hover:opacity-100 transition-opacity"
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${video.source.custom ? "bg-primary" : "bg-emerald-400"}`} />
+          {video.source.type}
+          <span className="text-white/60 normal-case tracking-normal">· {video.source.host}</span>
+        </div>
+      )}
+
       {!failed && (
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col gap-2 backdrop-blur-sm">
           <div

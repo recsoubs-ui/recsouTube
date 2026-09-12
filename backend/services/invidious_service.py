@@ -315,6 +315,13 @@ class InvidiousService:
 
             # normalize
             normalized = self._normalize(inst, endpoint, data)
+            if endpoint == "video" and isinstance(normalized, dict):
+                normalized["source"] = {
+                    "url": inst["url"],
+                    "host": inst["url"].split("://", 1)[-1],
+                    "type": inst["type"],
+                    "custom": bool(inst.get("custom")),
+                }
             if cache_key:
                 ttl = cache_ttl if cache_ttl is not None else self.CACHE_TTL_SECONDS
                 self._cache[cache_key] = (time.time() + ttl, normalized)

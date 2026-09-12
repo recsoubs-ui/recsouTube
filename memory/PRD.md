@@ -41,6 +41,9 @@ Full-stack video platform "RecsouTube" utilisant Invidious (avec fallback Piped)
 - NOTE: le plugin babel visual-edits plante (Maximum call stack) sur des composants mutuellement récursifs → éviter A↔B, factoriser (CommentBody).
 - Frontend: CommentsSection sous la description (compteur, skeleton, épinglé/cœur/vérifié, « Charger plus »), testé: 20 → 40 commentaires.
 
+## Implémenté (2026-09-12) — Badge source
+- /api/videos/{id} inclut `source` {url, host, type, custom} = instance ayant servi la vidéo (posé dans _do_request avant mise en cache). Badge en haut à gauche du lecteur (player-source-badge), point vert = publique, rouge (primary) = instance perso.
+
 ## BLOQUEUR EXTERNE (09/2026)
 - YouTube bloque l'extraction de flux sur les instances Piped publiques pour la quasi-totalité des vidéos (0/12 résultats de recherche lisibles, dQw4w9WgXcQ OK). Invidious publiques: API derrière anti-bot (Anubis) → 403/HTML.
 - yt-dlp depuis le pod: URLs obtenues mais téléchargement 403 (PO token) → non viable.
