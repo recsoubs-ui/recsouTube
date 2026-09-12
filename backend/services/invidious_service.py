@@ -21,6 +21,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 USER_AGENT = "Mozilla/5.0 (compatible; RecsouTubeBot/1.0)"
+INVIDIOUS_LOCALE = os.environ.get("INVIDIOUS_LOCALE", "fr")
 
 
 def _extract_video_id(url_or_id: str) -> str:
@@ -343,21 +344,23 @@ class InvidiousService:
     ) -> tuple[Optional[str], dict]:
         params = dict(params or {})
         if itype == "invidious":
+            hl = {"hl": INVIDIOUS_LOCALE}
             if endpoint == "search":
-                return "/api/v1/search", params
+                return "/api/v1/search", {**params, **hl}
             if endpoint == "video":
-                return f"/api/v1/videos/{video_id}", {}
+                # local=true -> stream URLs proxied by the instance (playable from any IP)
+                return f"/api/v1/videos/{video_id}", {"local": "true", **hl}
             if endpoint == "trending":
-                return "/api/v1/trending", params
+                return "/api/v1/trending", {**params, **hl}
             if endpoint == "popular":
-                return "/api/v1/popular", {}
+                return "/api/v1/popular", hl
             if endpoint == "channel":
-                return f"/api/v1/channels/{channel_id}", {}
+                return f"/api/v1/channels/{channel_id}", hl
             if endpoint == "channel_videos":
-                return f"/api/v1/channels/{channel_id}/videos", {}
+                return f"/api/v1/channels/{channel_id}/videos", hl
             if endpoint == "comments":
                 cont = params.get("continuation")
-                return f"/api/v1/comments/{video_id}", ({"continuation": cont} if cont else {})
+                return f"/api/v1/comments/{video_id}", ({"continuation": cont, **hl} if cont else hl)
         else:  # piped
             if endpoint == "search":
                 q = params.pop("q", "")
@@ -387,6 +390,12 @@ class InvidiousService:
     # ---------- normalization ----------
     def _normalize(self, inst: dict, endpoint: str, data: Any) -> Any:
         if inst["type"] == "invidious":
+            if endpoint == "video" and isinstance(data, dict):
+                dash = data.get("dashUrl") or ""
+                if dash and "local=" not in dash:
+                    data["dashUrl"] = dash + ("&" if "?" in dash else "?") + "local=true"
+                if data.get("liveNow") and not data.get("hlsUrl"):
+                    data["dashUrl"] = ""  # live DASH manifests are empty on Invidious
             return data
         # piped -> invidious
         if endpoint == "search":

@@ -17,14 +17,19 @@ export function formatViews(n) {
   return String(n);
 }
 
+export function absUrl(u) {
+  if (!u) return "";
+  return u.startsWith("//") ? `https:${u}` : u;
+}
+
 export function pickThumbnail(video) {
   const arr = video?.videoThumbnails || [];
   if (!arr.length) return "";
   const pref = arr.find((t) => t.quality === "medium") || arr.find((t) => t.quality === "high") || arr[0];
-  return pref.url || "";
+  return absUrl(pref.url);
 }
 
 export function pickAvatar(video) {
   const arr = video?.authorThumbnails || [];
-  return arr[0]?.url || "";
+  return absUrl(arr[arr.length - 1]?.url || "");
 }

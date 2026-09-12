@@ -7,7 +7,7 @@ import CommentsSection from "@/components/CommentsSection";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThumbsUp, ThumbsDown, Share2, ListPlus, Users, Loader2 } from "lucide-react";
-import { formatViews } from "@/lib/format";
+import { formatViews, pickAvatar } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
@@ -154,9 +154,9 @@ export default function Watch() {
                   data-testid="watch-channel-link"
                   className="flex items-center gap-3"
                 >
-                  {video?.authorThumbnails?.[0]?.url && (
+                  {pickAvatar(video) && (
                     <img
-                      src={video.authorThumbnails[0].url}
+                      src={pickAvatar(video)}
                       alt={video.author}
                       className="w-10 h-10 rounded-full object-cover"
                     />

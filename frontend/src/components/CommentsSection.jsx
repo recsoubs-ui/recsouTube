@@ -3,13 +3,13 @@ import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatViews } from "@/lib/format";
+import { formatViews, absUrl } from "@/lib/format";
 import {
   ThumbsUp, Pin, Heart, BadgeCheck, Loader2, MessageSquare, ChevronDown, ChevronUp, CornerDownRight,
 } from "lucide-react";
 
 function CommentBody({ c, small = false }) {
-  const avatar = c.authorThumbnails?.[0]?.url;
+  const avatar = absUrl(c.authorThumbnails?.[0]?.url || c.authorThumbnail || "");
   const size = small ? "w-7 h-7" : "w-9 h-9";
   return (
     <div className="flex gap-3">

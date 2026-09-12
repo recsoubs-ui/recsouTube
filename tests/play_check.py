@@ -21,7 +21,7 @@ async def main():
         await page.wait_for_selector("[data-testid^='video-card-']", timeout=60000)
         n = await page.locator("[data-testid^='video-card-']").count()
         print("search cards", n)
-        await page.goto(URL.rstrip("/") + "/watch/dQw4w9WgXcQ", wait_until="networkidle")
+        await page.goto(URL.rstrip("/") + "/watch/GqrKj5lD5y4", wait_until="networkidle")
         await page.wait_for_selector("[data-testid='watch-title']", timeout=60000)
         await page.wait_for_timeout(3000)
         cont = page.locator("[data-testid='player-container']")

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Hls from "hls.js";
+import dashjs from "dashjs";
 import { Play, Pause, Volume2, VolumeX, Maximize, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +15,8 @@ import { formatDuration } from "@/lib/format";
 export default function VideoPlayer({ video, onRetry }) {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
+  const dashRef = useRef(null);
+  const watchdogRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -33,16 +36,42 @@ export default function VideoPlayer({ video, onRetry }) {
     setBuffering(candidates.length > 0);
   }, [video?.videoId, candidates.length]);
 
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v || !selected) return;
-    const resumeAt = v.currentTime || 0;
+  const teardown = () => {
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
+    if (dashRef.current) {
+      try { dashRef.current.reset(); } catch (_e) { /* noop */ }
+      dashRef.current = null;
+    }
+    if (watchdogRef.current) {
+      clearTimeout(watchdogRef.current);
+      watchdogRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !selected) return;
+    const resumeAt = v.currentTime || 0;
+    teardown();
     setBuffering(true);
-    if (selected.kind === "hls") {
+    // if an adaptive source never becomes playable, move on to the next candidate
+    watchdogRef.current = setTimeout(() => {
+      if (videoRef.current && videoRef.current.readyState < 2) advance();
+    }, 15000);
+    if (selected.kind === "dash") {
+      if (!dashjs.supportsMediaSource()) {
+        advance();
+        return;
+      }
+      const player = dashjs.MediaPlayer().create();
+      dashRef.current = player;
+      player.updateSettings({ streaming: { abr: { autoSwitchBitrate: { video: true, audio: true } } } });
+      player.on(dashjs.MediaPlayer.events.ERROR, () => advance());
+      player.initialize(v, selected.url, false);
+    } else if (selected.kind === "hls") {
       if (v.canPlayType("application/vnd.apple.mpegurl")) {
         v.src = selected.url;
       } else if (Hls.isSupported()) {
@@ -59,16 +88,11 @@ export default function VideoPlayer({ video, onRetry }) {
       }
     } else {
       v.src = selected.url;
+      v.load();
     }
-    v.load();
     if (resumeAt) v.currentTime = resumeAt;
     if (playing) v.play().catch(() => {});
-    return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-    };
+    return teardown;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.url]);
 
@@ -83,6 +107,10 @@ export default function VideoPlayer({ video, onRetry }) {
 
   const onLoaded = () => {
     setBuffering(false);
+    if (watchdogRef.current) {
+      clearTimeout(watchdogRef.current);
+      watchdogRef.current = null;
+    }
     const v = videoRef.current;
     if (v && Number.isFinite(v.duration)) setDuration(v.duration);
   };
@@ -131,7 +159,7 @@ export default function VideoPlayer({ video, onRetry }) {
         onPause={() => setPlaying(false)}
         onLoadedMetadata={onLoaded}
         onTimeUpdate={onTime}
-        onError={() => { if (!hlsRef.current) advance(); }}
+        onError={() => { if (!hlsRef.current && !dashRef.current) advance(); }}
         onClick={togglePlay}
         playsInline
         controls={false}
@@ -164,7 +192,9 @@ export default function VideoPlayer({ video, onRetry }) {
           className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 p-6 text-center"
         >
           <p className="text-sm text-white/90 max-w-md">
-            Aucun flux vidéo lisible n'a été fourni par les instances Invidious/Piped pour cette vidéo.
+            {video?.liveNow && candidates.length === 0
+              ? "Les diffusions en direct ne sont pas disponibles via les instances Invidious/Piped actuelles."
+              : "Aucun flux vidéo lisible n'a été fourni par les instances Invidious/Piped pour cette vidéo."}
             {candidates.length > 0 && " Votre navigateur ne prend en charge aucun des formats proposés."}
           </p>
           {onRetry && (
@@ -256,7 +286,7 @@ export default function VideoPlayer({ video, onRetry }) {
   );
 }
 
-// Ordered list of playable sources: progressive mp4/webm (best first), then HLS.
+// Ordered list of playable sources: DASH (adaptive HD) first, then progressive mp4/webm, then HLS.
 function buildCandidates(video) {
   if (!video) return [];
   const list = [];
@@ -279,5 +309,9 @@ function buildCandidates(video) {
     });
   }
   if (video.hlsUrl) push({ kind: "hls", url: video.hlsUrl, label: video.liveNow ? "Live (HLS)" : "Auto (HLS)" });
+  if (video.dashUrl && !video.liveNow) {
+    const maxH = Math.max(0, ...(video.adaptiveFormats || []).map((f) => parseInt(f.qualityLabel || f.resolution || 0) || 0));
+    list.unshift({ kind: "dash", url: video.dashUrl, label: maxH ? `Auto (jusqu'à ${maxH}p)` : "Auto (HD)" });
+  }
   return list;
 }
