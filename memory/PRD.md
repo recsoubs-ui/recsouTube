@@ -16,7 +16,7 @@ Full-stack video platform "RecsouTube" utilisant Invidious (avec fallback Piped)
 - Auth complète: register, login, me, logout
 - Historique, playlists, abonnements, likes (Mongo)
 - Frontend: Home (trending), Search, Watch (custom player + embed fallback), Trending, Channel, History, Playlists, Subscriptions, Settings (theme + instances health), Login/Register, 404
-- Custom video player HTML5 + iframe fallback Invidious embed
+- Custom video player HTML5 (aucun iframe)
 - Thème sombre/clair, sidebar responsive, glass header
 
 ## Implémenté (2026-09-12) — correctifs lecture/recherche
@@ -24,6 +24,7 @@ Full-stack video platform "RecsouTube" utilisant Invidious (avec fallback Piped)
 - Service: erreur ressource (YouTube anti-bot "SignInConfirmNotBot") ≠ erreur instance → l'instance n'est plus marquée morte; essai sur toutes les instances; HTTP 424 + message FR (502 est réécrit en HTML par l'ingress)
 - Instance ajoutée: pipedapi.ducks.party (seules private.coffee + ducks.party répondent en 09/2026)
 - Normalisation: description sans HTML, date JJ/MM/AAAA, subCountText compact, badge LIVE corrigé (duration -1 + pas de date)
+- 2026-09-12 (suite): iframe Invidious embed SUPPRIMÉ à la demande du user — lecteur HTML5 uniquement, erreur claire + Réessayer si aucun flux. Contrainte permanente: AUCUN lecteur/iframe/embed YouTube, aucun iframe tout court.
 - VideoPlayer: liste de candidats (progressive mp4/webm puis HLS via hls.js), bascule auto sur erreur, gros bouton play, data-stream-kind/label; embed Invidious seulement sur clic
 - Watch: message d'erreur backend affiché + bouton Réessayer; historique auto + préchargement liked/abonné
 - POST /history et /subscriptions renvoient {ok, item}; subscriptions $setOnInsert (id stable)

@@ -11,9 +11,7 @@ import {
 } from "@/components/ui/select";
 import { formatDuration } from "@/lib/format";
 
-const EMBED_BASE = "https://inv.nadeko.net/embed";
-
-export default function VideoPlayer({ video }) {
+export default function VideoPlayer({ video, onRetry }) {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -23,7 +21,6 @@ export default function VideoPlayer({ video }) {
   const [buffering, setBuffering] = useState(true);
   const [index, setIndex] = useState(0);
   const [failed, setFailed] = useState(false);
-  const [useEmbed, setUseEmbed] = useState(false);
 
   const candidates = useMemo(() => buildCandidates(video), [video]);
   const selected = candidates[index];
@@ -31,7 +28,6 @@ export default function VideoPlayer({ video }) {
   useEffect(() => {
     setIndex(0);
     setFailed(candidates.length === 0);
-    setUseEmbed(false);
     setPlaying(false);
     setCurrentTime(0);
     setBuffering(candidates.length > 0);
@@ -118,26 +114,6 @@ export default function VideoPlayer({ video }) {
     if (el?.requestFullscreen) el.requestFullscreen();
   };
 
-  const embedUrl = video?.videoId ? `${EMBED_BASE}/${video.videoId}?autoplay=1` : "";
-
-  if (useEmbed && embedUrl) {
-    return (
-      <div className="relative w-full aspect-video rounded-3xl overflow-hidden border shadow-2xl bg-black">
-        <iframe
-          data-testid="player-embed-iframe"
-          src={embedUrl}
-          title={video?.title || "video"}
-          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-          allowFullScreen
-          className="w-full h-full"
-        />
-        <div className="absolute top-3 left-3 px-2 py-1 rounded-md bg-black/60 text-[10px] font-mono uppercase tracking-widest text-white">
-          Lecture via Invidious embed
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       data-testid="player-container"
@@ -188,11 +164,14 @@ export default function VideoPlayer({ video }) {
           className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 p-6 text-center"
         >
           <p className="text-sm text-white/90 max-w-md">
-            Aucun flux lisible n'a été trouvé pour cette vidéo. Vous pouvez essayer le lecteur intégré Invidious.
+            Aucun flux vidéo lisible n'a été fourni par les instances Invidious/Piped pour cette vidéo.
+            {candidates.length > 0 && " Votre navigateur ne prend en charge aucun des formats proposés."}
           </p>
-          <Button data-testid="player-try-embed" onClick={() => setUseEmbed(true)} className="rounded-full">
-            Utiliser le lecteur Invidious
-          </Button>
+          {onRetry && (
+            <Button data-testid="player-retry-button" onClick={onRetry} className="rounded-full">
+              Réessayer
+            </Button>
+          )}
         </div>
       )}
 

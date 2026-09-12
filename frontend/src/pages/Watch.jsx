@@ -134,7 +134,7 @@ export default function Watch() {
               </Button>
             </div>
           ) : (
-            <VideoPlayer video={video} />
+            <VideoPlayer video={video} onRetry={() => setRetry((r) => r + 1)} />
           )}
 
           {loading ? (
