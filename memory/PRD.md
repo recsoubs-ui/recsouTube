@@ -37,6 +37,8 @@ Full-stack video platform "RecsouTube" utilisant Invidious (avec fallback Piped)
 
 ## Implémenté (2026-09-12) — Commentaires
 - GET /api/comments/{id}?continuation=... (Piped: /nextpage/comments, Invidious: continuation). Normalisation: content (texte sans HTML), contentHtml, replyCount, isPinned, creatorHeart, verified, authorIsChannelOwner, continuation.
+- Réponses: `repliesContinuation` (Piped repliesPage / Invidious replies.continuation) → même endpoint; bouton « Voir les réponses (n) » / « Masquer », « Plus de réponses ». Bug corrigé: clé de cache commentaires = sha1(continuation) (collision sur préfixe).
+- NOTE: le plugin babel visual-edits plante (Maximum call stack) sur des composants mutuellement récursifs → éviter A↔B, factoriser (CommentBody).
 - Frontend: CommentsSection sous la description (compteur, skeleton, épinglé/cœur/vérifié, « Charger plus »), testé: 20 → 40 commentaires.
 
 ## BLOQUEUR EXTERNE (09/2026)

@@ -4,17 +4,20 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatViews } from "@/lib/format";
-import { ThumbsUp, Pin, Heart, BadgeCheck, Loader2, MessageSquare } from "lucide-react";
+import {
+  ThumbsUp, Pin, Heart, BadgeCheck, Loader2, MessageSquare, ChevronDown, ChevronUp, CornerDownRight,
+} from "lucide-react";
 
-function Comment({ c }) {
+function CommentBody({ c, small = false }) {
   const avatar = c.authorThumbnails?.[0]?.url;
+  const size = small ? "w-7 h-7" : "w-9 h-9";
   return (
-    <li data-testid={`comment-${c.commentId}`} className="flex gap-3">
+    <div className="flex gap-3">
       <Link to={c.authorId ? `/channel/${c.authorId}` : "#"} className="shrink-0">
         {avatar ? (
-          <img src={avatar} alt={c.author} loading="lazy" className="w-9 h-9 rounded-full object-cover" />
+          <img src={avatar} alt={c.author} loading="lazy" className={`${size} rounded-full object-cover`} />
         ) : (
-          <div className="w-9 h-9 rounded-full bg-primary/15 text-primary text-xs font-semibold flex items-center justify-center">
+          <div className={`${size} rounded-full bg-primary/15 text-primary text-xs font-semibold flex items-center justify-center`}>
             {(c.author || "?").replace("@", "")[0]?.toUpperCase()}
           </div>
         )}
@@ -38,8 +41,88 @@ function Comment({ c }) {
             <ThumbsUp className="w-3.5 h-3.5" /> {c.likeCount > 0 ? formatViews(c.likeCount) : ""}
           </span>
           {c.creatorHeart && <Heart className="w-3.5 h-3.5 text-primary fill-primary" />}
-          {c.replyCount > 0 && <span>{c.replyCount} réponse{c.replyCount > 1 ? "s" : ""}</span>}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function Replies({ videoId, commentId, continuation: initial }) {
+  const [items, setItems] = useState([]);
+  const [continuation, setContinuation] = useState(initial);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const load = async (cont) => {
+    setLoading(true);
+    try {
+      const { data } = await api.get(`/comments/${videoId}`, { params: { continuation: cont } });
+      setItems((prev) => {
+        const seen = new Set(prev.map((r) => r.commentId));
+        return [...prev, ...(data.comments || []).filter((r) => !seen.has(r.commentId))];
+      });
+      setContinuation(data.continuation || "");
+    } catch (_e) {
+      setError("Impossible de charger les réponses.");
+      setContinuation("");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(initial); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <ul data-testid={`replies-${commentId}`} className="mt-3 space-y-4 pl-3 border-l-2 border-border/60">
+      {items.map((r) => (
+        <li key={r.commentId} data-testid={`reply-${r.commentId}`}>
+          <CommentBody c={r} small />
+        </li>
+      ))}
+      {error && <li className="text-xs text-muted-foreground">{error}</li>}
+      {loading && (
+        <li className="text-xs text-muted-foreground flex items-center gap-2">
+          <Loader2 className="w-3 h-3 animate-spin" /> Chargement des réponses…
+        </li>
+      )}
+      {!loading && continuation && (
+        <li>
+          <button
+            type="button"
+            data-testid={`replies-more-${commentId}`}
+            onClick={() => load(continuation)}
+            className="text-xs font-medium text-primary hover:underline inline-flex items-center gap-1"
+          >
+            <CornerDownRight className="w-3 h-3" /> Plus de réponses
+          </button>
+        </li>
+      )}
+    </ul>
+  );
+}
+
+function Comment({ c, videoId }) {
+  const [open, setOpen] = useState(false);
+  const repliesCont = c.repliesContinuation || c.replies?.continuation || "";
+  const replyCount = c.replyCount || c.replies?.replyCount || 0;
+  return (
+    <li data-testid={`comment-${c.commentId}`}>
+      <CommentBody c={c} />
+      <div className="pl-12">
+        {replyCount > 0 && repliesCont ? (
+          <button
+            type="button"
+            data-testid={`replies-toggle-${c.commentId}`}
+            onClick={() => setOpen((o) => !o)}
+            className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:bg-primary/10 rounded-full px-2.5 py-1 -ml-2.5 transition-colors"
+          >
+            {open ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            {open ? "Masquer les réponses" : `Voir les réponses (${formatViews(replyCount)})`}
+          </button>
+        ) : replyCount > 0 ? (
+          <div className="mt-1 text-xs text-muted-foreground">{replyCount} réponse{replyCount > 1 ? "s" : ""}</div>
+        ) : null}
+        {open && <Replies videoId={videoId} commentId={c.commentId} continuation={repliesCont} />}
       </div>
     </li>
   );
@@ -115,7 +198,7 @@ export default function CommentsSection({ videoId }) {
       ) : (
         <>
           <ul className="space-y-5" data-testid="comments-list">
-            {items.map((c) => <Comment key={c.commentId} c={c} />)}
+            {items.map((c) => <Comment key={c.commentId} c={c} videoId={videoId} />)}
           </ul>
           {continuation && (
             <div className="mt-5">

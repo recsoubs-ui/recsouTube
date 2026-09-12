@@ -7,6 +7,7 @@ Invidious-shaped payloads. Piped responses are normalized to look like Invidious
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import os
 import re
@@ -572,6 +573,7 @@ class InvidiousService:
                     "publishedText": c.get("commentedTime") or "",
                     "likeCount": int(c.get("likeCount") or 0),
                     "replyCount": int(c.get("replyCount") or 0),
+                    "repliesContinuation": c.get("repliesPage") or "",
                     "commentId": c.get("commentId") or "",
                     "isPinned": bool(c.get("pinned")),
                     "creatorHeart": bool(c.get("hearted")),
@@ -639,7 +641,7 @@ class InvidiousService:
             "comments",
             video_id=video_id,
             params={"continuation": continuation} if continuation else {},
-            cache_key=f"comments:{video_id}:{continuation[:64]}",
+            cache_key=f"comments:{video_id}:{hashlib.sha1(continuation.encode()).hexdigest() if continuation else ''}",
             cache_ttl=300,
         )
 
