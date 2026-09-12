@@ -35,6 +35,10 @@ Full-stack video platform "RecsouTube" utilisant Invidious (avec fallback Piped)
 - Frontend: Settings → composant CustomInstanceCard (URL, type, header/valeur auth, Tester la connexion, Enregistrer, Retirer). Badge "perso" dans la liste des instances.
 - Header mobile: bouton Rechercher masqué <sm (Enter soumet), plus d'overflow à 390px.
 
+## Implémenté (2026-09-12) — Commentaires
+- GET /api/comments/{id}?continuation=... (Piped: /nextpage/comments, Invidious: continuation). Normalisation: content (texte sans HTML), contentHtml, replyCount, isPinned, creatorHeart, verified, authorIsChannelOwner, continuation.
+- Frontend: CommentsSection sous la description (compteur, skeleton, épinglé/cœur/vérifié, « Charger plus »), testé: 20 → 40 commentaires.
+
 ## BLOQUEUR EXTERNE (09/2026)
 - YouTube bloque l'extraction de flux sur les instances Piped publiques pour la quasi-totalité des vidéos (0/12 résultats de recherche lisibles, dQw4w9WgXcQ OK). Invidious publiques: API derrière anti-bot (Anubis) → 403/HTML.
 - yt-dlp depuis le pod: URLs obtenues mais téléchargement 403 (PO token) → non viable.
@@ -43,7 +47,6 @@ Full-stack video platform "RecsouTube" utilisant Invidious (avec fallback Piped)
 ## Backlog (P1)
 - Playlist add-to-playlist depuis la page Watch
 - Filtres de recherche (durée, date, tri) et pagination
-- Comments section sur Watch
 - Persistance abonné/liké côté UI depuis /likes /subscriptions
 
 ## Backlog (P2)

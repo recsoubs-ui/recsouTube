@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import VideoPlayer from "@/components/VideoPlayer";
 import VideoCard from "@/components/VideoCard";
+import CommentsSection from "@/components/CommentsSection";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThumbsUp, ThumbsDown, Share2, ListPlus, Users, Loader2 } from "lucide-react";
@@ -210,6 +211,8 @@ export default function Watch() {
                   </p>
                 )}
               </div>
+
+              <CommentsSection videoId={video.videoId || videoId} />
             </>
           ) : null}
         </div>

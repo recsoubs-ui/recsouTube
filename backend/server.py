@@ -193,9 +193,9 @@ async def get_channel_videos(channel_id: str):
 
 
 @api.get("/comments/{video_id}")
-async def get_comments(video_id: str):
+async def get_comments(video_id: str, continuation: str = ""):
     try:
-        return await get_invidious_service().comments(video_id)
+        return await get_invidious_service().comments(video_id, continuation)
     except ResourceUnavailableError as e:
         raise HTTPException(status_code=424, detail=str(e))
     except InvidiousUnavailableError as e:

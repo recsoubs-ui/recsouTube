@@ -348,7 +348,8 @@ class InvidiousService:
             if endpoint == "channel_videos":
                 return f"/api/v1/channels/{channel_id}/videos", {}
             if endpoint == "comments":
-                return f"/api/v1/comments/{video_id}", {}
+                cont = params.get("continuation")
+                return f"/api/v1/comments/{video_id}", ({"continuation": cont} if cont else {})
         else:  # piped
             if endpoint == "search":
                 q = params.pop("q", "")
@@ -369,6 +370,9 @@ class InvidiousService:
             if endpoint == "channel_videos":
                 return f"/channel/{channel_id}", {}
             if endpoint == "comments":
+                cont = params.get("continuation")
+                if cont:
+                    return f"/nextpage/comments/{video_id}", {"nextpage": cont}
                 return f"/comments/{video_id}", {}
         return None, {}
 
@@ -553,6 +557,7 @@ class InvidiousService:
             return {"commentCount": 0, "comments": []}
         return {
             "commentCount": int(d.get("commentCount") or 0),
+            "continuation": d.get("nextpage") or "",
             "comments": [
                 {
                     "author": c.get("author") or "",
@@ -562,11 +567,16 @@ class InvidiousService:
                         else []
                     ),
                     "authorId": _extract_channel_id(c.get("commentorUrl") or ""),
-                    "content": c.get("commentText") or "",
+                    "content": _strip_html(c.get("commentText") or ""),
                     "contentHtml": c.get("commentText") or "",
                     "publishedText": c.get("commentedTime") or "",
                     "likeCount": int(c.get("likeCount") or 0),
+                    "replyCount": int(c.get("replyCount") or 0),
                     "commentId": c.get("commentId") or "",
+                    "isPinned": bool(c.get("pinned")),
+                    "creatorHeart": bool(c.get("hearted")),
+                    "verified": bool(c.get("verified")),
+                    "authorIsChannelOwner": bool(c.get("channelOwner")),
                 }
                 for c in (d.get("comments") or [])
             ],
@@ -624,11 +634,12 @@ class InvidiousService:
         )
         return data if isinstance(data, list) else []
 
-    async def comments(self, video_id: str):
+    async def comments(self, video_id: str, continuation: str = ""):
         return await self._do_request(
             "comments",
             video_id=video_id,
-            cache_key=f"comments:{video_id}",
+            params={"continuation": continuation} if continuation else {},
+            cache_key=f"comments:{video_id}:{continuation[:64]}",
             cache_ttl=300,
         )
 
